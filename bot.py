@@ -78,4 +78,4 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("⏳ Upload ho raha hai...")
         try:
             headers = {
-                "Authorization": f"Bearer
+                "Authorization": "Bearer " + PAGES_API_TOKEN,
