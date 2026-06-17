@@ -4,7 +4,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
 # ===== APNI DETAILS YAHAN BHARO =====
-BOT_TOKEN = "8935637388:AAEEEge5sTTG1vWQqFvcTXE3kM97BXn4t0g"
+BOT_TOKEN = "8935637388:AAFrm5jfRNISj4oyaW0gktQh3a0KiYblEmg"
 TENCENT_SECRET_ID = "IKIDMYS5RUDsHM7ZhUw4suc2AyScSxtWolOj"
 TENCENT_SECRET_KEY = "4nDI3UzA0WhZ6JBwPXLoyoJUKr4xWprE"
 ALLOWED_USER = 8837854952  # apna Telegram ID
