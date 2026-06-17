@@ -6,7 +6,7 @@ from telegram.ext import ApplicationBuilder, MessageHandler, CallbackQueryHandle
 
 BOT_TOKEN = "8935637388:AAFrm5jfRNISj4oyaW0gktQh3a0KiYblEmg"
 ALLOWED_USER = 8837854952
-PAGES_TOKEN = "m5FsF4KK110J/5y6aZuTdkXmFleB+QM7OZcBLNokX4M="
+PAGES_TOKEN = "yKmeZfNSpxyV3yg7eSMffB7BuzMNkgiZJB2a+0HvFVw="
 PROJECT_NAME = "achiever8"
 
 SITE_URL = "https://achiever8.edgeone.dev/"
