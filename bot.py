@@ -64,4 +64,4 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_link))
 app.add_handler(CallbackQueryHandler(handle_callback))
-app.run_polling()
+app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
