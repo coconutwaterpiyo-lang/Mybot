@@ -1,67 +1,129 @@
+cd ~/mybot
+cat > bot.py << 'EOF'
 import os
+import json
+import hmac
+import hashlib
+import datetime
 import requests
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
-# ===== APNI DETAILS YAHAN BHARO =====
 BOT_TOKEN = "8935637388:AAFrm5jfRNISj4oyaW0gktQh3a0KiYblEmg"
-TENCENT_SECRET_ID = "IKIDMYS5RUDsHM7ZhUw4suc2AyScSxtWolOj"
-TENCENT_SECRET_KEY = "4nDI3UzA0WhZ6JBwPXLoyoJUKr4xWprE"
-ALLOWED_USER = 8837854952  # apna Telegram ID
-# =====================================
+ALLOWED_USER = 8837854952
+SECRET_ID = "IKIDMYS5RUDsHM7ZhUw4suc2AyScSxtWolOj"
+SECRET_KEY = "4nDI3UzA0WhZ6JBwPXLoyoJUKr4xWprE"
+PAGES_API_TOKEN = "TERA_PAGES_API_TOKEN"
 
-user_data = {}
+DOMAINS_FILE = "domains.json"
+FOLDERS_FILE = "folders.json"
 
-async def handle_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def load_data(file, default):
+    if os.path.exists(file):
+        with open(file) as f:
+            return json.load(f)
+    return default
+
+def save_data(file, data):
+    with open(file, "w") as f:
+        json.dump(data, f)
+
+user_state = {}
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id != ALLOWED_USER:
         await update.message.reply_text("❌ Access Denied!")
         return
-    
-    url = update.message.text
-    user_data[update.message.from_user.id] = {"url": url}
-    
-    # Domain list fetch karo
-    keyboard = [
-        [InlineKeyboardButton("gaganpratapvod2", callback_data="domain_gaganpratapvod2")],
-        [InlineKeyboardButton("pundit-mocks", callback_data="domain_pundit-mocks")],
-        [InlineKeyboardButton("tgdoraemonmocks", callback_data="domain_tgdoraemonmocks")],
-        [InlineKeyboardButton("sscpratham02", callback_data="domain_sscpratham02")],
-        [InlineKeyboardButton("10juneca", callback_data="domain_10juneca")],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("📁 Domain select karo:", reply_markup=reply_markup)
+
+    uid = update.message.from_user.id
+    text = update.message.text
+
+    if user_state.get(uid) == "adding_domain":
+        domains = load_data(DOMAINS_FILE, [])
+        domains.append(text)
+        save_data(DOMAINS_FILE, domains)
+        user_state[uid] = None
+        await update.message.reply_text(f"✅ Domain '{text}' add ho gaya!")
+        return
+
+    if user_state.get(uid) == "adding_folder":
+        folders = load_data(FOLDERS_FILE, [])
+        folders.append(text)
+        save_data(FOLDERS_FILE, folders)
+        user_state[uid] = None
+        await update.message.reply_text(f"✅ Folder '{text}' add ho gaya!")
+        return
+
+    user_state[uid] = {"url": text}
+    domains = load_data(DOMAINS_FILE, ["gaganpratapvod2", "pundit-mocks", "tgdoraemonmocks", "sscpratham02", "10juneca"])
+
+    keyboard = [[InlineKeyboardButton(d, callback_data=f"domain_{d}")] for d in domains]
+    keyboard.append([InlineKeyboardButton("➕ Add Domain", callback_data="add_domain")])
+
+    await update.message.reply_text("🌐 Domain select karo:", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    user_id = query.from_user.id
+    uid = query.from_user.id
     data = query.data
+
+    if data == "add_domain":
+        user_state[uid] = "adding_domain"
+        await query.edit_message_text("✏️ Naya domain naam bhejo:")
+        return
+
+    if data == "add_folder":
+        user_state[uid] = "adding_folder"
+        await query.edit_message_text("✏️ Naya folder naam bhejo:")
+        return
 
     if data.startswith("domain_"):
         domain = data.replace("domain_", "")
-        user_data[user_id]["domain"] = domain
-        
-        keyboard = [
-            [InlineKeyboardButton("📁 Movies", callback_data="folder_movies")],
-            [InlineKeyboardButton("📁 Music", callback_data="folder_music")],
-            [InlineKeyboardButton("📁 Docs", callback_data="folder_docs")],
-            [InlineKeyboardButton("📁 Videos", callback_data="folder_videos")],
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.edit_message_text(f"✅ Domain: {domain}\n\n📂 Folder select karo:", reply_markup=reply_markup)
+        if isinstance(user_state.get(uid), dict):
+            user_state[uid]["domain"] = domain
+
+        folders = load_data(FOLDERS_FILE, ["Movies", "Music", "Docs", "Videos"])
+        keyboard = [[InlineKeyboardButton(f"📁 {f}", callback_data=f"folder_{f}")] for f in folders]
+        keyboard.append([InlineKeyboardButton("➕ Add Folder", callback_data="add_folder")])
+
+        await query.edit_message_text(f"✅ Domain: {domain}\n\n📂 Folder select karo:", reply_markup=InlineKeyboardMarkup(keyboard))
 
     elif data.startswith("folder_"):
         folder = data.replace("folder_", "")
-        url = user_data[user_id]["url"]
-        domain = user_data[user_id]["domain"]
-        
-        await query.edit_message_text(f"⏳ Upload ho raha hai...")
-        
-        # Yahan EdgeOne API call hogi
-        final_url = f"https://{domain}.edgeone.app/{folder}/{url.split('/')[-1]}"
-        await query.edit_message_text(f"✅ Done!\n🔗 Link: {final_url}")
+        state = user_state.get(uid, {})
+        url = state.get("url", "")
+        domain = state.get("domain", "")
+
+        await query.edit_message_text("⏳ Upload ho raha hai...")
+
+        try:
+            headers = {
+                "Authorization": f"Bearer {PAGES_API_TOKEN}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "projectName": domain,
+                "files": [
+                    {
+                        "path": f"/{folder}/{url.split('/')[-1]}",
+                        "content": url
+                    }
+                ]
+            }
+            response = requests.post(
+                "https://api.edgeone.ai/pages/deploy",
+                headers=headers,
+                json=payload
+            )
+            result = response.json()
+            final_url = f"https://{domain}.edgeone.app/{folder}/{url.split('/')[-1]}"
+            await query.edit_message_text(f"✅ Done!\n🔗 Link: {final_url}")
+        except Exception as e:
+            await query.edit_message_text(f"❌ Error: {str(e)}")
 
 app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_link))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 app.add_handler(CallbackQueryHandler(handle_callback))
-app.run_polling(drop_pending_updates=True, allowed_updates=Update.ALL_TYPES)
+app.run_polling(drop_pending_updates=True)
+EOF
