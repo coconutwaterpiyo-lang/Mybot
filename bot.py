@@ -77,5 +77,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         domain = state.get("domain", "")
         await query.edit_message_text("⏳ Upload ho raha hai...")
         try:
-            headers = {
-                "Authorization": "Bearer " + PAGES_API_TOKEN,
+            headers = {}
+headers["Authorization"] = "Bearer " + PAGES_API_TOKEN
+headers["Content-Type"] = "application/json"
